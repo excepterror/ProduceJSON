@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import requests
@@ -22,7 +23,7 @@ roster = {'ALBA Berlin': {},
           'Anadolu Efes Istanbul': {},
           'AS Monaco': {},
           'EA7 Emporio Armani Milan': {},
-          'Cazoo Baskonia Vitoria-Gasteiz': {},
+          'Baskonia Vitoria-Gasteiz': {},
           'Crvena Zvezda Meridianbet Belgrade': {},
           'Partizan Mozzart Bet Belgrade': {},
           'FC Barcelona': {},
@@ -31,16 +32,25 @@ roster = {'ALBA Berlin': {},
           'LDLC ASVEL Villeurbanne': {},
           'Maccabi Playtika Tel Aviv': {},
           'Olympiacos Piraeus': {},
-          'Panathinaikos Athens': {},
+          'Panathinaikos AKTOR Athens': {},
           'Real Madrid': {},
           'Valencia Basket': {},
           'Zalgiris Kaunas': {},
           'Virtus Segafredo Bologna': {}}
 
 latin_num = ('I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X')
+players_count = 0
+json_files_count = 0
 
-for index in range(1, 14):
-    with open(f'C:\\Users\\Thomas\\Desktop\\JSONs\\{index}.json', encoding='utf8') as f:
+for root, dirs, files in os.walk('C:\\Users\\Thomas\\Desktop\\JSONs\\2023-24'):
+    for file in files:
+        if file.endswith('.json'):
+            json_files_count += 1
+
+print(f'\nJSON files to be processed: {json_files_count}\n')
+
+for index in range(1, json_files_count + 1):
+    with open(f'C:\\Users\\Thomas\\Desktop\\JSONs\\2023-24\\{index}.json', encoding='utf8') as f:
         d = json.load(f)
         data = d['data']
         for i in range(len(data)):
@@ -66,6 +76,7 @@ for index in range(1, 14):
             fixed_name = n.rstrip()
             dashed_name = fixed_name.lower().replace(' ', '-')
             base_url = f'https://www.euroleaguebasketball.net/euroleague/players/{dashed_name}/{code}/'
+            players_count += 1
 
             try:
                 session = requests.Session()
@@ -82,21 +93,25 @@ for index in range(1, 14):
                 logging.warning(e)
             else:
                 tree = etree.HTML(response.content)
-                photo_urls = tree.xpath('//div[@class="player-hero_inner__1-bR2 side-gaps_sectionSideGaps__1ylL0"]'
-                                        '//div[@class="player-hero_imageWrap__161BQ cover-contain_ofCover__3K_IS"]//img//@data-srcset')
+                photo_urls = tree.xpath('//div[@class="player-hero_inner__rwwR_ side-gaps_sectionSideGaps__v5CKj"]'
+                                        '//div[@class="player-hero_imageWrap__h_4aj cover-contain_ofCover__PuYyp"]//img//@data-srcset')
                 try:
                     photo_url = photo_urls[0].split(',')[0]
                 except IndexError as idx_err:
-                    logging.warning(f' {fixed_name}:' + ' Url probably non-existent: [ERROR] {}'.format(idx_err))
+                    logging.warning(f' {fixed_name}:' + ' Photo url probably non-existent: [ERROR] {}'.format(idx_err))
+                    photo_url_fixed = ''
+                    roster[club][fixed_name] = base_url, photo_url_fixed
+                    print(roster[club][fixed_name])
                 else:
                     photo_url_fixed = re.search("(?P<url>https?://[^\s]+)", photo_url).group("url")
                     photo_url_fixed = photo_url_fixed.replace('=webp', '=png')
-                # print(photo_url_fixed)
                     roster[club][fixed_name] = base_url, photo_url_fixed
-    print(f'JSON file {index} processed!')
+    print(f'\nJSON file {index} processed!\n')
 print(roster)
+print(f'\nPlayers processed: {players_count}')
+print(f'JSON files processed: {json_files_count}')
 
-with open("roster.json", "w") as outfile:
+with open(f'C:\\Users\\Thomas\\Desktop\\JSONs\\2023-24\\roster.json', "w") as outfile:
     json.dump(roster, outfile, indent=4)
 
 # with open('roster.json') as json_file:
