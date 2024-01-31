@@ -103,7 +103,7 @@ for index in range(1, json_files_count + 1):
                     roster[club][fixed_name] = base_url, photo_url_fixed
                     print(roster[club][fixed_name])
                 else:
-                    photo_url_fixed = re.search("(?P<url>https?://[^\s]+)", photo_url).group("url")
+                    photo_url_fixed = re.search(r"(?P<url>https?://\S+)", photo_url).group("url")
                     photo_url_fixed = photo_url_fixed.replace('=webp', '=png')
                     roster[club][fixed_name] = base_url, photo_url_fixed
     print(f'\nJSON file {index} processed!\n')
