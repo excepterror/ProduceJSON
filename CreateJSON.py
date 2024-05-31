@@ -3,8 +3,6 @@ import re
 import json
 import requests
 import logging
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from lxml import etree
 
 # from json2html import *
@@ -38,7 +36,7 @@ roster = {'ALBA Berlin': {},
           'Zalgiris Kaunas': {},
           'Virtus Segafredo Bologna': {}}
 
-latin_num = ('I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X')
+latin_num = ('I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'JR', 'Iv')
 players_count = 0
 json_files_count = 0
 
@@ -58,33 +56,42 @@ for index in range(1, json_files_count + 1):
             name = person['name']
             code = person['code']
             club = data[i]['club']['name']
-            split_n = name.split(',')
-            _ = split_n[1].split(' ')[1]
-            split_n[1] = _
-            split_n[0], split_n[1] = split_n[1], split_n[0]
+            split_n = re.findall(r'\w+', name)
             name = split_n
 
-            n = ''
-            r = re.compile(r"[^\W\d]+")
-            for j in range(len(name)):
-                for _ in r.findall(name[j]):
+            suffix = str()
+            fixed_name = str()
+            log = bool(False)
+            if len(name) == 2:
+                name = name[::-1]
+                for _ in name:
                     if _ not in latin_num:
-                        _ = _.title()
-                        n += _ + ' '
-                    else:
-                        n += _
-            fixed_name = n.rstrip()
+                        fixed_name += _.capitalize() + " "
+            if len(name) == 3:
+                name = name[::-1]
+                for _ in name:
+                    if _ in latin_num:
+                        suffix = _
+                        log = True
+                        fixed_name = str()
+                        break
+                if log:
+                    name.pop(name.index(suffix))
+                    for k in name:
+                        fixed_name += k.capitalize() + " "
+                    fixed_name += suffix
+                if not log:
+                    name[1], name[2] = name[2], name[1]
+                    for k in name:
+                        fixed_name += k.capitalize() + " "
+
+            fixed_name = fixed_name.rstrip()
             dashed_name = fixed_name.lower().replace(' ', '-')
             base_url = f'https://www.euroleaguebasketball.net/euroleague/players/{dashed_name}/{code}/'
             players_count += 1
 
             try:
-                session = requests.Session()
-                retry = Retry(connect=3, backoff_factor=0.5)
-                adapter = HTTPAdapter(max_retries=retry)
-                session.mount('http://', adapter)
-                session.mount('https://', adapter)
-                response = session.get(base_url)
+                response = requests.get(base_url, timeout=(30, 30))
             except requests.exceptions.HTTPError as http_error:
                 logging.warning('HTTP error occurred: {}'.format(http_error))
             except requests.exceptions.ConnectTimeout as conn_timeout:
@@ -111,7 +118,7 @@ print(roster)
 print(f'\nPlayers processed: {players_count}')
 print(f'JSON files processed: {json_files_count}')
 
-with open(f'C:\\Users\\Thomas\\Desktop\\JSONs\\2023-24\\roster.json', "w") as outfile:
+with open('C:\\Users\\Thomas\\Desktop\\JSONs\\2023-24\\roster.json', "w") as outfile:
     json.dump(roster, outfile, indent=4)
 
 # with open('roster.json') as json_file:
